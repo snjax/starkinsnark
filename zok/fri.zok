@@ -1,0 +1,109 @@
+import "./poseidon" as poseidon
+
+
+struct FriProofRecursive {
+    field root
+    field[40][6] column_branches
+    field[160][8] poly_branches
+}
+
+struct FriProof {
+    FriProofRecursive[1] recursive
+    field[80] direct
+}
+
+
+def get_pseudorandom_indices(field src, field setsize, field exclude_multiples_of) -> (field[40]):
+    // TODO implement pseudorandom indices
+    return [0;40]
+
+def verify_multi_branch_column(field root, field[40] indices, field[40][6] proof) -> (field[40]):
+    // TODO implement branch verification
+    return [0;40]
+
+
+def verify_multi_branch_poly(field root, field[160] indices, field[160][8] proof) -> (field[160]):
+    // TODO implement branch verification
+    return [0;160]
+
+def exp(field e, field x) -> (field):
+    // TODO implement exp
+    return 0
+
+def multi_interp_4(field[40][4] xsets, field[40][4] ysets) -> (field[40][4]):
+    // TODO implement multi_interp_4
+    return [[0;4];40]
+
+def eval_quartic(field[4] poly, field x) -> (field):
+    // TODO implement eval_quartic
+    return 0
+
+def main(field merkle_root, FriProof proof) -> (field):
+    field maxdeg_plus_1 = 32
+    field roudeg = 128
+    field root_of_unity = 18154240498369470423574571952998640420834620155273666494480695920805672807787
+    field extension_factor = 8
+
+    exp(root_of_unity, roudeg) == 1
+
+    field[4] quartic_roots_of_unity = [1, exp(root_of_unity, roudeg/4), exp(root_of_unity, roudeg/2), exp(root_of_unity, roudeg*3/4)]
+
+
+    for field prf_i in 0..1 do
+        FriProofRecursive prf = proof.recursive[prf_i]
+        field root2 = prf.root
+        field[40][6] column_branches = prf.column_branches
+        field[160][8] poly_branches = prf.poly_branches
+
+        field special_x = merkle_root
+        
+        // Calculate the pseudo-randomly sampled y indices
+        field[40] ys = get_pseudorandom_indices(root2, roudeg / 4, extension_factor)
+        field[160] poly_positions = [0;160]
+        
+        // Compute the positions for the values in the polynomial
+        for field ys_i in 0..40 do
+            for field j in 0..4 do
+                poly_positions[ys_i*4+j] = ys[ys_i] + (roudeg / 4) * j 
+            endfor
+        endfor
+
+
+        // Verify Merkle branches
+        field[40] column_values = verify_multi_branch_column(root2, ys, column_branches)
+        field[160] poly_values = verify_multi_branch_poly(merkle_root, poly_positions, poly_branches)
+
+        // For each y coordinate, get the x coordinates on the row, the values on
+        // the row, and the value at that y from the column
+        
+        field[40][4] xcoords = [[0;4];40]
+        field[40][4] rows = [[0;4];40]
+
+        for field i in 0..40 do
+            field y = ys[i]
+            field x1 = exp(root_of_unity, y)
+            for field j in 0..4 do
+                xcoords[i][j] = quartic_roots_of_unity[j] * x1
+                rows[i][j] = poly_values[i*4+j]
+            endfor
+            
+            
+
+        endfor
+
+        polys = multi_interp_4(xcoords, rows)
+
+        for field i in 0..40 do
+            field t = eval_quartic(polys[i], special_x)
+            column_values[i] == t
+        endfor
+
+        // Update constants to check the next proof
+        merkle_root = root2
+        root_of_unity = exp(root_of_unity, 4)
+        maxdeg_plus_1 = maxdeg_plus_1 / 4
+        roudeg = roudeg / 4
+    endfor
+    // TODO implement direct part of proof
+    return 1
+    
