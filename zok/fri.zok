@@ -13,9 +13,18 @@ struct FriProof {
 }
 
 
-def get_pseudorandom_indices(field src, field setsize, field exclude_multiples_of) -> (field[40]):
-    // TODO implement pseudorandom indices
-    return [0;40]
+def get_pseudorandom_indices(field src, field modulus, field exclude_multiples_of) -> (field[40]):
+    field real_modulus = modulus * (exclude_multiples_of - 1) // exclude_multiples_of
+    field[40] res = [0;40]
+    
+    for field i in 0..40 do
+        field t = poseidon([src, i])
+        field t2 = t // real_modulus
+        t = t - t2 * real_modulus
+        t2 = t // (exclude_multiples_of-1)
+        res[i] = t + 1 + t2 
+    endfor
+    return res
 
 def verify_multi_branch_column(field root, field[40] indices, field[40][6] proof) -> (field[40]):
     // TODO implement branch verification
